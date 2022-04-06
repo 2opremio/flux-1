@@ -8,6 +8,9 @@ import (
 	arrow "github.com/apache/arrow/go/v7/arrow/memory"
 	"github.com/google/go-cmp/cmp"
 	"github.com/influxdata/flux/compiler"
+	"github.com/influxdata/flux/execute/executetest"
+	fluxfeature "github.com/influxdata/flux/internal/feature"
+	"github.com/influxdata/flux/internal/pkg/feature"
 	"github.com/influxdata/flux/memory"
 	"github.com/influxdata/flux/runtime"
 	"github.com/influxdata/flux/semantic"
@@ -174,7 +177,14 @@ func TestVectorizedFns(t *testing.T) {
 			checked := arrow.NewCheckedAllocator(memory.DefaultAllocator)
 			mem := &memory.GcAllocator{ResourceAllocator: &memory.ResourceAllocator{Allocator: checked}}
 
-			ctx := compiler.RuntimeDependencies{Allocator: mem}.Inject(context.Background())
+			ctx := context.Background()
+			ctx = feature.Inject(
+				ctx,
+				executetest.TestFlagger{
+					fluxfeature.VectorizeAddition().Key(): true,
+				},
+			)
+			ctx = compiler.RuntimeDependencies{Allocator: mem}.Inject(ctx)
 
 			pkg, err := runtime.AnalyzeSource(ctx, tc.fn)
 			if err != nil {
