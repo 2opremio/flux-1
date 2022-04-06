@@ -174,7 +174,9 @@ func TestVectorizedFns(t *testing.T) {
 			checked := arrow.NewCheckedAllocator(memory.DefaultAllocator)
 			mem := &memory.GcAllocator{ResourceAllocator: &memory.ResourceAllocator{Allocator: checked}}
 
-			pkg, err := runtime.AnalyzeSource(tc.fn)
+			ctx := compiler.RuntimeDependencies{Allocator: mem}.Inject(context.Background())
+
+			pkg, err := runtime.AnalyzeSource(ctx, tc.fn)
 			if err != nil {
 				t.Fatalf("unexpected error: %s", err)
 			}
@@ -201,7 +203,6 @@ func TestVectorizedFns(t *testing.T) {
 				t.Fatalf("unexpected error: %s", err)
 			}
 			input := vectorizedObjectFromMap(tc.input, mem)
-			ctx := compiler.RuntimeDependencies{Allocator: mem}.Inject(context.Background())
 			got, err := f.Eval(ctx, input)
 			if err != nil {
 				t.Fatalf("unexpected error: %s", err)
