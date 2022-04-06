@@ -50,6 +50,7 @@ func TestVectorizedFns(t *testing.T) {
 		input        map[string]interface{}
 		want         map[string]interface{}
 		skipComp     bool
+		flagger      executetest.TestFlagger
 	}
 
 	testCases := []TestCase{
@@ -92,6 +93,12 @@ func TestVectorizedFns(t *testing.T) {
 				"a": []interface{}{1.2},
 				"b": []interface{}{1.2},
 			},
+		},
+		{
+			name:         "no binary expressions without feature flag",
+			fn:           `(r) => ({c: r.a + r.b})`,
+			vectorizable: false,
+			skipComp:     true,
 		},
 		{
 			name:         "no literals",
@@ -169,6 +176,10 @@ func TestVectorizedFns(t *testing.T) {
 			}),
 			input: test.input,
 			want:  test.want,
+
+			flagger: executetest.TestFlagger{
+				fluxfeature.VectorizeAddition().Key(): true,
+			},
 		})
 	}
 
@@ -180,9 +191,7 @@ func TestVectorizedFns(t *testing.T) {
 			ctx := context.Background()
 			ctx = feature.Inject(
 				ctx,
-				executetest.TestFlagger{
-					fluxfeature.VectorizeAddition().Key(): true,
-				},
+				tc.flagger,
 			)
 			ctx = compiler.RuntimeDependencies{Allocator: mem}.Inject(ctx)
 
